@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#c9a24a">
 <title>Voyager à travers la Bible</title>
 <link rel="stylesheet" href="style.css">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon-192.png">
 </head>
 <body>
 <header>
@@ -44,5 +46,10 @@
 <p id="fb-status" style="text-align:center;font-size:.8rem;padding:8px"></p>
 <script type="module" src="firebase-init.js"></script>
 <script src="app.js"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js");
+}
+</script>
 </body>
 </html>
