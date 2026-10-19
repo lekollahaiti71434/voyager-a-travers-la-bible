@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "app.vercel.voyager_a_travers_la_bible.twa",
-        "sha256_cert_fingerprints": ["BC:0F:C7:3B:34:4C:44:E5:AB:9F:F1:23:D7:64:62:3E:0D:06:18:3E:2C:74:79:18:B6:2D:5D:73:15:45:32:67"]
-      }
-    }]
