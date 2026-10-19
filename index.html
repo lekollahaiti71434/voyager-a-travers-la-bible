@@ -8,6 +8,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon-192.png">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="pawol.css">
 </head>
 <body>
 <header>
@@ -24,7 +25,7 @@
 
   <section id="pawol" class="page">
     <h2 data-i18n="pawol">Pawòl Bondye</h2>
-    <p data-i18n="soon"></p>
+    <div id="pawol-content"></div>
   </section>
 
   <section id="komunote" class="page">
@@ -47,6 +48,7 @@
 
 <p id="fb-status" style="text-align:center;font-size:.8rem;padding:8px"></p>
 <script type="module" src="firebase-init.js"></script>
+<script type="module" src="pawol.js"></script>
 <script src="app.js"></script>
 <script>
 if ("serviceWorker" in navigator) {
@@ -54,4 +56,4 @@ if ("serviceWorker" in navigator) {
 }
 </script>
 </body>
-</html>
+    </html>
