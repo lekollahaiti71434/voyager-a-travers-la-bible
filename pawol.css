@@ -1,0 +1,9 @@
+.card { background:#fff; border:1px solid #e6dcc0; border-radius:10px; padding:16px; margin-bottom:16px; }
+.card .ref { color:#c9a24a; font-weight:bold; margin-bottom:8px; }
+.card .verse { font-size:1.1rem; line-height:1.6; margin-bottom:12px; }
+.card h3 { font-size:.95rem; color:#c9a24a; margin:12px 0 4px; }
+.share { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+.share a { background:#111; color:#c9a24a; text-decoration:none; padding:8px 12px; border-radius:6px; font-size:.85rem; }
+.archives h3 { margin:20px 0 8px; color:#c9a24a; }
+.archives details { background:#fff; border:1px solid #e6dcc0; border-radius:8px; padding:10px 12px; margin-bottom:8px; }
+.archives summary { font-weight:bold; }
