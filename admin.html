@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="pawol.css">
+<style>
+body{padding-bottom:20px}
+label{display:block;margin:12px 0 4px;font-weight:bold}
+input,textarea{width:100%;padding:10px;border:1px solid #c9a24a;border-radius:6px;font:inherit;background:#fff}
+textarea{min-height:110px}
+.btn{background:#111;color:#c9a24a;border:none;padding:12px 16px;border-radius:6px;font-size:1rem;margin:12px 8px 0 0}
+.btn.danger{background:#a33;color:#fff}
+#msg{margin-top:10px;font-size:.9rem}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #e6dcc0}
+.item div:last-child{display:flex;gap:6px}
+.item .btn{margin:0;padding:8px 10px;font-size:.85rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>Espas administrasyon</h1>
+  <button id="out" class="btn" style="margin:0;padding:6px 12px;display:none">Soti</button>
+</header>
+<main>
+<section id="login">
+  <label>Imèl</label><input id="email" type="email" autocomplete="username">
+  <label>Modpas</label><input id="pass" type="password" autocomplete="current-password">
+  <button id="in" class="btn">Konekte</button>
+</section>
+<section id="panel" style="display:none">
+  <h2>Piblikasyon</h2>
+  <label>Dat piblikasyon</label><input id="date" type="date">
+  <label>Referans (egzanp: Jan 3:16)</label><input id="ref">
+  <label>Tèks vèsè biblik</label><textarea id="verset"></textarea>
+  <label>Reflèksyon pou jounen an</label><textarea id="reflexion"></textarea>
+  <button id="save" class="btn" type="button">Anrejistre</button>
+  <button id="clear" class="btn" type="button">Nouvo</button>
+  <p id="msg"></p>
+  <h3>Aperçu ak pataj</h3>
+  <div id="preview"></div>
+  <h3>Piblikasyon yo</h3>
+  <div id="list"></div>
+</section>
+</main>
+<script type="module" src="admin.js"></script>
+</body>
+</html>
