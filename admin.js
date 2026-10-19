@@ -66,6 +66,15 @@ function preview() {
   fb.href = "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(location.origin);
   fb.target = "_blank"; fb.rel = "noopener";
   share.appendChild(wa); share.appendChild(fb);
+  if (navigator.share) {
+    const nb = el("a", "", "Pataje...");
+    nb.href = "#";
+    nb.onclick = function (e) {
+      e.preventDefault();
+      navigator.share({ text: text, url: location.origin }).catch(function () {});
+    };
+    share.appendChild(nb);
+  }
   card.appendChild(share);
   box.appendChild(card);
 }
