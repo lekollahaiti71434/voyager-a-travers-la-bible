@@ -7,22 +7,32 @@ const db = getFirestore(app);
 const root = document.getElementById("pawol-content");
 
 const L = {
-  ht: { today: "Vèsè jou a", reflexion: "Refleksyon", priye: "Lapriyè", archives: "Achiv",
+  ht: { today: "Vèsè jounen an", reflexion: "Refleksyon", priye: "Lapriyè", archives: "Achiv",
         empty: "Pa gen pawòl pibliye pou kounye a.", error: "Pa kapab chaje kontni an.",
         loading: "Chajman...", wa: "WhatsApp", fb: "Facebook" },
-  fr: { today: "Verset du jour", reflexion: "Réflexion", priye: "Prière", archives: "Archives",
+  fr: { today: "Verset de la journée", reflexion: "Réflexion", priye: "Prière", archives: "Archives",
         empty: "Aucune parole publiée pour le moment.", error: "Impossible de charger le contenu.",
-        loading: "Chargement...", wa: "WhatsApp", fb: "Facebook" }
+        loading: "Chargement...", wa: "WhatsApp", fb: "Facebook" },
+  en: { today: "Verse of the day", reflexion: "Reflection", priye: "Prayer", archives: "Archives",
+        empty: "No verse published yet.", error: "Unable to load content.",
+        loading: "Loading...", wa: "WhatsApp", fb: "Facebook" },
+  es: { today: "Versículo del día", reflexion: "Reflexión", priye: "Oración", archives: "Archivos",
+        empty: "Aún no hay versículos publicados.", error: "No se pudo cargar el contenido.",
+        loading: "Cargando...", wa: "WhatsApp", fb: "Facebook" }
 };
 
 let docs = [];
 let state = "loading";
 
 function lang() {
-  try { return localStorage.getItem("lang") || "ht"; } catch (e) { return "ht"; }
+  let l = "ht";
+  try { l = localStorage.getItem("lang") || "ht"; } catch (e) {}
+  return L[l] ? l : "ht";
 }
 function pick(d, f) {
-  return (lang() === "fr" && d[f + "_fr"]) ? d[f + "_fr"] : (d[f] || "");
+  const l = lang();
+  const suffix = l === "ht" ? "" : "_" + l;
+  return d[f + suffix] || d[f] || "";
 }
 function el(tag, cls, text) {
   const e = document.createElement(tag);
