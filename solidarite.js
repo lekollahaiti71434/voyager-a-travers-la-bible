@@ -108,7 +108,9 @@ function donatePanel(p) {
     panel.appendChild(el("p", "", s.needLogin));
     return panel;
   }
-  panel.appendChild(el("p", "", s.how));
+  s.how.split(/\s(?=\d\)\s)/).forEach(function (line) {
+    panel.appendChild(el("p", "", line));
+  });
   panel.appendChild(phoneRow("MonCash", MONCASH));
   panel.appendChild(phoneRow("NatCash", NATCASH));
 
