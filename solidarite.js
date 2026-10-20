@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const MONCASH = "+509 3608 7837";
@@ -173,6 +173,90 @@ function donatePanel(p) {
   return panel;
 }
 
+const ML = {
+  ht: { photos: "Wè foto yo", video: "Gade videyo", loadErr: "Pa kapab chaje foto yo." },
+  fr: { photos: "Voir les photos", video: "Regarder la vidéo", loadErr: "Impossible de charger les photos." },
+  en: { photos: "View photos", video: "Watch video", loadErr: "Unable to load photos." },
+  es: { photos: "Ver fotos", video: "Ver video", loadErr: "No se pudieron cargar las fotos." }
+};
+const photoCache = {};
+
+function ytId(url) {
+  const m = String(url).match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+function safeUrl(u) { return /^https?:\/\//i.test(u) ? u : null; }
+
+function lightbox(src) {
+  const o = el("div", "slight");
+  const im = document.createElement("img");
+  im.src = src;
+  o.appendChild(im);
+  o.onclick = function () { o.remove(); };
+  document.body.appendChild(o);
+}
+
+function mediaBlock(u) {
+  const m = ML[lang()];
+  const box = el("div", "smedia");
+  const n = Number(u.photoCount) || 0;
+  if (n > 0) {
+    const grid = el("div", "sgrid");
+    const b = el("button", "ssmall", "📷 " + m.photos + " (" + n + ")");
+    b.type = "button";
+    b.onclick = async function () {
+      b.disabled = true;
+      b.textContent = "...";
+      try {
+        const srcs = [];
+        for (let i = 0; i < n; i++) {
+          const key = u.id + "_" + i;
+          if (!photoCache[key]) {
+            const snap = await getDoc(doc(db, "media", key));
+            if (snap.exists()) photoCache[key] = "data:image/jpeg;base64," + snap.data().data;
+          }
+          if (photoCache[key]) srcs.push(photoCache[key]);
+        }
+        grid.textContent = "";
+        srcs.forEach(function (src) {
+          const im = document.createElement("img");
+          im.src = src;
+          im.onclick = function () { lightbox(src); };
+          grid.appendChild(im);
+        });
+        b.remove();
+      } catch (e) {
+        b.disabled = false;
+        b.textContent = m.loadErr;
+      }
+    };
+    box.appendChild(b);
+    box.appendChild(grid);
+  }
+  (u.videos || []).forEach(function (url) {
+    const href = safeUrl(url);
+    if (!href) return;
+    const id = ytId(url);
+    const holder = el("div", "svideo");
+    const b = el("button", "ssmall", "🎬 " + m.video);
+    b.type = "button";
+    b.onclick = function () {
+      if (id) {
+        const fr = document.createElement("iframe");
+        fr.src = "https://www.youtube-nocookie.com/embed/" + id;
+        fr.allow = "encrypted-media; picture-in-picture; fullscreen";
+        fr.allowFullscreen = true;
+        holder.textContent = "";
+        holder.appendChild(fr);
+      } else {
+        window.open(href, "_blank", "noopener");
+      }
+    };
+    holder.appendChild(b);
+    box.appendChild(holder);
+  });
+  return box;
+}
 function card(p) {
   const s = t();
   const c = el("div", "scard");
@@ -214,6 +298,7 @@ function card(p) {
     const r = el("div", "srep", u.text || "");
     const when = u.createdAt && u.createdAt.toDate ? u.createdAt.toDate().toLocaleDateString(loc(), { day: "numeric", month: "long", year: "numeric" }) : "";
     r.appendChild(el("small", "", when));
+    r.appendChild(mediaBlock(u));
     det.appendChild(r);
   });
   c.appendChild(det);
