@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, updateDoc, getDocs, writeBatch, increment, query, orderBy, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, updateDoc, getDocs, writeBatch, increment, query, orderBy, where, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const ADMIN_UID = "azWWZrzbaXa2KJFgAUluRi5BQqj1";
@@ -15,9 +15,11 @@ const TR_LABEL = {
   description_fr: "Deskripsyon an franse", description_en: "Deskripsyon an anglè", description_es: "Deskripsyon an espanyòl"
 };
 const BOX = "width:100%;padding:10px;border:1px solid #c9a24a;border-radius:6px;font:inherit;background:#fff";
+const MAX_PHOTOS = 6;
 
 let editingId = null;
 let projectsCache = [];
+const photos = [];
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -26,7 +28,7 @@ function el(tag, cls, text) {
   return e;
 }
 function input(type) { const i = document.createElement("input"); i.type = type; return i; }
-function area() { const a = document.createElement("textarea"); return a; }
+function area() { return document.createElement("textarea"); }
 function select(opts) {
   const s = document.createElement("select");
   s.style.cssText = BOX;
@@ -44,7 +46,12 @@ function field(parent, label, node) {
   return node;
 }
 function money(n) { return Number(n || 0).toLocaleString("fr") + " HTG"; }
+function projTitle(id) {
+  const p = projectsCache.find(function (x) { return x.id === id; });
+  return p ? p.title : "(pwojè efase)";
+}
 
+/* ---------- Pwojè ---------- */
 root.appendChild(el("h2", "", "Solidarite"));
 root.appendChild(el("h3", "", "Pwojè"));
 
@@ -57,7 +64,6 @@ f.collected = field(root, "Montan kolekte (HTG)", input("number"));
 f.status = field(root, "Estati", select([["active", "Aktif"], ["closed", "Fèmen"]]));
 
 const det = document.createElement("details");
-det.style.marginTop = "14px";
 det.appendChild(el("summary", "", "Tradiksyon (opsyonèl)"));
 TR.forEach(function (k) {
   f[k] = field(det, TR_LABEL[k], k.indexOf("title") === 0 ? input("text") : area());
@@ -71,35 +77,19 @@ newBtn.type = "button";
 root.appendChild(saveBtn);
 root.appendChild(newBtn);
 const msg = el("p", "");
-msg.style.marginTop = "10px";
 root.appendChild(msg);
 
 root.appendChild(el("h3", "", "Lis pwojè yo"));
 const projBox = el("div");
 root.appendChild(projBox);
 
-root.appendChild(el("h3", "", "Pibliye yon rapò"));
-const repSel = select([]);
-field(root, "Pwojè", repSel);
-const repText = field(root, "Rapò a", area());
-const repBtn = el("button", "btn", "Pibliye rapò");
-repBtn.type = "button";
-root.appendChild(repBtn);
-const repMsg = el("p", "");
-root.appendChild(repMsg);
-
-root.appendChild(el("h3", "", "Don an atant"));
-const donBox = el("div");
-root.appendChild(donBox);
-
 function clearForm() {
   editingId = null;
   f.title.value = ""; f.description.value = ""; f.category.value = "school";
   f.goal.value = ""; f.collected.value = "0"; f.status.value = "active";
   TR.forEach(function (k) { f[k].value = ""; });
-  msg.textContent = "";
 }
-newBtn.onclick = clearForm;
+newBtn.onclick = function () { clearForm(); msg.textContent = ""; };
 clearForm();
 
 saveBtn.onclick = async function () {
@@ -122,7 +112,6 @@ saveBtn.onclick = async function () {
       data.createdAt = serverTimestamp();
       await addDoc(collection(db, "projects"), data);
     }
-    msg.textContent = "Anrejistre ✅";
     clearForm();
     msg.textContent = "Anrejistre ✅";
     loadAll();
@@ -131,6 +120,159 @@ saveBtn.onclick = async function () {
   }
 };
 
+/* ---------- Rapò (foto + videyo) ---------- */
+root.appendChild(el("h3", "", "Pibliye yon rapò (foto ak videyo)"));
+const repSel = select([]);
+field(root, "Pwojè", repSel);
+const repText = field(root, "Rapò a (egzanp: nou bay pat ak savon nan prizon)", area());
+const fileI = field(root, "Foto (maksimòm " + MAX_PHOTOS + ")", input("file"));
+fileI.accept = "image/*";
+fileI.multiple = true;
+const thumbs = el("div");
+thumbs.style.cssText = "display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px";
+root.appendChild(thumbs);
+const vidI = field(root, "Lyen videyo (YouTube, Facebook, Google Drive...). Yon lyen pa liy, maksimòm 3.", area());
+vidI.style.minHeight = "70px";
+const repBtn = el("button", "btn", "Pibliye rapò");
+repBtn.type = "button";
+root.appendChild(repBtn);
+const repMsg = el("p", "");
+root.appendChild(repMsg);
+
+function loadImage(file) {
+  return new Promise(function (res, rej) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function () { URL.revokeObjectURL(url); res(img); };
+    img.onerror = function () { URL.revokeObjectURL(url); rej(new Error("img")); };
+    img.src = url;
+  });
+}
+async function compress(file) {
+  const img = await loadImage(file);
+  const tries = [[1280, 0.72], [1024, 0.6], [800, 0.5]];
+  for (let i = 0; i < tries.length; i++) {
+    const k = Math.min(1, tries[i][0] / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * k);
+    c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    const data = c.toDataURL("image/jpeg", tries[i][1]).split(",")[1];
+    if (data.length <= 700000) return data;
+  }
+  throw new Error("big");
+}
+function drawThumbs() {
+  thumbs.textContent = "";
+  photos.forEach(function (p, i) {
+    const w = el("div");
+    w.style.position = "relative";
+    const im = document.createElement("img");
+    im.src = "data:image/jpeg;base64," + p;
+    im.style.cssText = "width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:6px";
+    const x = el("button", "btn danger", "✕");
+    x.type = "button";
+    x.style.cssText = "position:absolute;top:2px;right:2px;margin:0;padding:2px 8px;font-size:.8rem";
+    x.onclick = function () { photos.splice(i, 1); drawThumbs(); };
+    w.appendChild(im);
+    w.appendChild(x);
+    thumbs.appendChild(w);
+  });
+}
+fileI.onchange = async function () {
+  repMsg.textContent = "Ap prepare foto yo...";
+  const files = Array.from(fileI.files);
+  for (let i = 0; i < files.length; i++) {
+    if (photos.length >= MAX_PHOTOS) break;
+    try { photos.push(await compress(files[i])); } catch (e) {}
+  }
+  fileI.value = "";
+  drawThumbs();
+  repMsg.textContent = photos.length >= MAX_PHOTOS ? "Maksimòm " + MAX_PHOTOS + " foto." : "";
+};
+
+repBtn.onclick = async function () {
+  const text = repText.value.trim();
+  const vids = vidI.value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 3);
+  if (!repSel.value || (!text && !photos.length && !vids.length)) {
+    repMsg.textContent = "Chwazi yon pwojè epi ajoute tèks, foto oswa videyo.";
+    return;
+  }
+  if (vids.some(function (u) { return !/^https?:\/\//i.test(u); })) {
+    repMsg.textContent = "Lyen videyo a dwe kòmanse ak https://";
+    return;
+  }
+  repBtn.disabled = true;
+  repMsg.textContent = "Ap pibliye...";
+  try {
+    const upRef = doc(collection(db, "updates"));
+    const b = writeBatch(db);
+    photos.forEach(function (p, i) {
+      b.set(doc(db, "media", upRef.id + "_" + i), { updateId: upRef.id, n: i, data: p, createdAt: serverTimestamp() });
+    });
+    b.set(upRef, {
+      projectId: repSel.value,
+      text: text,
+      photoCount: photos.length,
+      videos: vids,
+      createdAt: serverTimestamp()
+    });
+    await b.commit();
+    repText.value = "";
+    vidI.value = "";
+    photos.length = 0;
+    drawThumbs();
+    repMsg.textContent = "Rapò pibliye ✅";
+    loadReports();
+  } catch (e) {
+    repMsg.textContent = "Erè: " + (e.code || e.message);
+  }
+  repBtn.disabled = false;
+};
+
+root.appendChild(el("h3", "", "Dènye rapò yo"));
+const repBox = el("div");
+root.appendChild(repBox);
+
+async function loadReports() {
+  repBox.textContent = "Chajman...";
+  try {
+    const snap = await getDocs(query(collection(db, "updates"), orderBy("createdAt", "desc"), limit(20)));
+    repBox.textContent = "";
+    if (snap.empty) { repBox.appendChild(el("p", "", "Poko gen rapò.")); return; }
+    snap.forEach(function (s) {
+      const u = s.data();
+      const when = u.createdAt && u.createdAt.toDate ? u.createdAt.toDate().toLocaleDateString("fr") : "";
+      const n = Number(u.photoCount) || 0;
+      const v = (u.videos || []).length;
+      const label = projTitle(u.projectId) + " · " + when + (n ? " · 📷" + n : "") + (v ? " · 🎬" + v : "") + "\n" + (u.text || "").slice(0, 80);
+      const row = el("div", "item");
+      const info = el("div", "", label);
+      info.style.whiteSpace = "pre-wrap";
+      row.appendChild(info);
+      const del = el("button", "btn danger", "Efase");
+      del.type = "button";
+      del.onclick = async function () {
+        if (!confirm("Efase rapò sa a (ak foto yo)?")) return;
+        try {
+          const b = writeBatch(db);
+          b.delete(doc(db, "updates", s.id));
+          for (let i = 0; i < n; i++) b.delete(doc(db, "media", s.id + "_" + i));
+          await b.commit();
+          loadReports();
+        } catch (e) {
+          repMsg.textContent = "Erè: " + (e.code || e.message);
+        }
+      };
+      row.appendChild(del);
+      repBox.appendChild(row);
+    });
+  } catch (e) {
+    repBox.textContent = "Erè: " + (e.code || e.message);
+  }
+}
+
+/* ---------- Pwojè: lis ---------- */
 async function loadProjects() {
   projBox.textContent = "Chajman...";
   try {
@@ -138,6 +280,7 @@ async function loadProjects() {
     projectsCache = snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
     projBox.textContent = "";
     if (!projectsCache.length) projBox.appendChild(el("p", "", "Poko gen pwojè."));
+    const keep = repSel.value;
     repSel.textContent = "";
     projectsCache.forEach(function (p) {
       const op = document.createElement("option");
@@ -174,22 +317,16 @@ async function loadProjects() {
       row.appendChild(btns);
       projBox.appendChild(row);
     });
+    if (keep) repSel.value = keep;
   } catch (e) {
     projBox.textContent = "Erè: " + (e.code || e.message);
   }
 }
 
-repBtn.onclick = async function () {
-  const text = repText.value.trim();
-  if (!repSel.value || !text) { repMsg.textContent = "Chwazi yon pwojè epi ekri rapò a."; return; }
-  try {
-    await addDoc(collection(db, "updates"), { projectId: repSel.value, text: text, createdAt: serverTimestamp() });
-    repText.value = "";
-    repMsg.textContent = "Rapò pibliye ✅";
-  } catch (e) {
-    repMsg.textContent = "Erè: " + (e.code || e.message);
-  }
-};
+/* ---------- Don an atant ---------- */
+root.appendChild(el("h3", "", "Don an atant"));
+const donBox = el("div");
+root.appendChild(donBox);
 
 async function loadDonations() {
   donBox.textContent = "Chajman...";
@@ -202,11 +339,11 @@ async function loadDonations() {
     donBox.textContent = "";
     if (!list.length) { donBox.appendChild(el("p", "", "Pa gen don an atant. ✅")); return; }
     list.forEach(function (d) {
-      const proj = projectsCache.find(function (p) { return p.id === d.projectId; });
       const card = el("div", "card");
-      card.appendChild(el("div", "ref", (proj ? proj.title : "(pwojè efase)") + " · " + money(d.amount)));
-      card.appendChild(el("p", "", d.name + " · " + (d.method === "moncash" ? "MonCash" : "NatCash") + "\nTranzaksyon: " + d.reference));
-      card.lastChild.style.whiteSpace = "pre-wrap";
+      card.appendChild(el("div", "ref", projTitle(d.projectId) + " · " + money(d.amount)));
+      const info = el("p", "", d.name + " · " + (d.method === "moncash" ? "MonCash" : "NatCash") + "\nTranzaksyon: " + d.reference);
+      info.style.whiteSpace = "pre-wrap";
+      card.appendChild(info);
 
       const ok = el("button", "btn", "Konfime");
       ok.type = "button";
@@ -244,6 +381,7 @@ async function loadDonations() {
 
 async function loadAll() {
   await loadProjects();
+  await loadReports();
   await loadDonations();
 }
 
