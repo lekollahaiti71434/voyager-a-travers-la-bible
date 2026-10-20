@@ -56,10 +56,12 @@ textarea{min-height:110px}
   <div id="preview"></div>
   <h3>Piblikasyon yo</h3>
   <div id="list"></div>
+  <div id="mod"></div>
 </section>
 </main>
 <script type="module" src="/admin.js"></script>
 <script>
+  <script type="module" src="/admin-mod.js"></script>
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/admin/sw.js", { scope: "/admin/" });
 }
