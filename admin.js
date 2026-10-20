@@ -7,6 +7,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const $ = function (id) { return document.getElementById(id); };
+const EXTRA = ["verset_fr", "verset_en", "verset_es", "reflexion_fr", "reflexion_en", "reflexion_es"];
 
 function msg(t) { $("msg").textContent = t; }
 function today() {
@@ -42,6 +43,7 @@ function clearForm() {
   $("ref").value = "";
   $("verset").value = "";
   $("reflexion").value = "";
+  EXTRA.forEach(function (id) { $(id).value = ""; });
   msg("");
   preview();
 }
@@ -85,13 +87,15 @@ $("save").onclick = async function () {
   const date = $("date").value;
   const verset = $("verset").value.trim();
   if (!date || !verset) { msg("Dat la ak vèsè a obligatwa."); return; }
+  const data = {
+    date: date,
+    reference: $("ref").value.trim(),
+    verset: verset,
+    reflexion: $("reflexion").value.trim()
+  };
+  EXTRA.forEach(function (id) { data[id] = $(id).value.trim(); });
   try {
-    await setDoc(doc(db, "pawol", date), {
-      date: date,
-      reference: $("ref").value.trim(),
-      verset: verset,
-      reflexion: $("reflexion").value.trim()
-    }, { merge: true });
+    await setDoc(doc(db, "pawol", date), data, { merge: true });
     msg("Anrejistre ✅");
     loadList();
   } catch (e) {
@@ -116,6 +120,7 @@ async function loadList() {
         $("ref").value = d.reference || "";
         $("verset").value = d.verset || "";
         $("reflexion").value = d.reflexion || "";
+        EXTRA.forEach(function (id) { $(id).value = d[id] || ""; });
         preview();
         window.scrollTo(0, 0);
       };
