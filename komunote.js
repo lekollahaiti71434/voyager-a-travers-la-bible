@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, getDoc, writeBatch, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, getDoc, setDoc, writeBatch, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const ADMIN_UID = "azWWZrzbaXa2KJFgAUluRi5BQqj1";
@@ -65,6 +65,13 @@ const L = {
 };
 
 const COLORS = ["#b5651d", "#2a7a8c", "#8e44ad", "#c0392b", "#27ae60", "#2c3e50", "#d35400"];
+const RP = {
+  ht: { report: "Siyale", confirmReport: "Siyale mesaj sa a bay administratè a?", reported: "Siyale ✓" },
+  fr: { report: "Signaler", confirmReport: "Signaler ce message à l'administrateur ?", reported: "Signalé ✓" },
+  en: { report: "Report", confirmReport: "Report this message to the administrator?", reported: "Reported ✓" },
+  es: { report: "Denunciar", confirmReport: "¿Denunciar este mensaje al administrador?", reported: "Denunciado ✓" }
+};
+const reportedIds = {};
 
 let mode = "login";
 let user = null;
@@ -563,6 +570,27 @@ function renderFeed() {
       };
       foot.appendChild(d);
     }
+    if (user && !own && user.uid !== ADMIN_UID) {
+      const r = RP[lang()];
+      const rb = el("button", "kdel", reportedIds[p.id] ? r.reported : r.report);
+      rb.type = "button";
+      rb.disabled = !!reportedIds[p.id];
+      rb.onclick = async function () {
+        if (!confirm(r.confirmReport)) return;
+        try {
+          await setDoc(doc(db, "reports", p.id + "_" + user.uid), {
+            postId: p.id,
+            postUid: p.uid,
+            reporter: user.uid,
+            createdAt: serverTimestamp()
+          });
+          reportedIds[p.id] = true;
+          rb.textContent = r.reported;
+          rb.disabled = true;
+        } catch (e) {}
+      };
+      foot.appendChild(rb);
+  }
     foot.appendChild(el("span", "", dt ? dt.toLocaleTimeString(loc(), { hour: "2-digit", minute: "2-digit" }) : ""));
     msg.appendChild(foot);
     feed.appendChild(msg);
