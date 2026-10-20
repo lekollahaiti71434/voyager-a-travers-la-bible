@@ -2,27 +2,36 @@ const T = {
   ht: {
     akey: "Akèy", pawol: "Pawòl Bondye", komunote: "Kominote", solidarite: "Solidarite",
     welcome: "Byenveni nan Voyager à travers la Bible.",
-    soon: "Seksyon sa a ap disponib talè."
+    soon: "Seksyon sa a ap disponib talè.",
+    share: "Pataje aplikasyon an",
+    shareMsg: "Mwen envite w dekouvri Voyager à travers la Bible: Pawòl Bondye, Kominote ak Solidarite."
   },
   fr: {
     akey: "Accueil", pawol: "Parole de Dieu", komunote: "Communauté", solidarite: "Solidarité",
     welcome: "Bienvenue dans Voyager à travers la Bible.",
-    soon: "Cette section sera bientôt disponible."
+    soon: "Cette section sera bientôt disponible.",
+    share: "Partager l'application",
+    shareMsg: "Je vous invite à découvrir Voyager à travers la Bible : Parole de Dieu, Communauté et Solidarité."
   },
   en: {
     akey: "Home", pawol: "Word of God", komunote: "Community", solidarite: "Solidarity",
     welcome: "Welcome to Voyager à travers la Bible.",
-    soon: "This section will be available soon."
+    soon: "This section will be available soon.",
+    share: "Share the app",
+    shareMsg: "I invite you to discover Voyager à travers la Bible: Word of God, Community and Solidarity."
   },
   es: {
     akey: "Inicio", pawol: "Palabra de Dios", komunote: "Comunidad", solidarite: "Solidaridad",
     welcome: "Bienvenido a Voyager à travers la Bible.",
-    soon: "Esta sección estará disponible pronto."
+    soon: "Esta sección estará disponible pronto.",
+    share: "Compartir la aplicación",
+    shareMsg: "Te invito a descubrir Voyager à travers la Bible: Palabra de Dios, Comunidad y Solidaridad."
   }
 };
 
 const LANGS = ["ht", "fr", "en", "es"];
 const LABEL = { ht: "KR", fr: "FR", en: "EN", es: "ES" };
+const APP_URL = "https://voyager-a-travers-la-bible.vercel.app";
 
 let lang = "ht";
 try { lang = localStorage.getItem("lang") || "ht"; } catch (e) {}
@@ -50,5 +59,17 @@ document.querySelectorAll("nav button").forEach(function (btn) {
     btn.classList.add("active");
   });
 });
+
+const shareBtn = document.getElementById("share-app");
+if (shareBtn) {
+  shareBtn.addEventListener("click", function () {
+    const text = T[lang].shareMsg;
+    if (navigator.share) {
+      navigator.share({ title: "Voyager à travers la Bible", text: text, url: APP_URL }).catch(function () {});
+    } else {
+      window.open("https://wa.me/?text=" + encodeURIComponent(text + "\n" + APP_URL), "_blank", "noopener");
+    }
+  });
+}
 
 render();
