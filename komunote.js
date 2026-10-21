@@ -25,7 +25,8 @@ const L = {
         mic: "Anrejistre yon vokal", cancel: "Anile", discard: "Jete vokal la",
         micDenied: "Mikwofòn lan bloke. Otorize l nan paramèt navigatè a.",
         micUnsupported: "Anrejistreman vokal pa sipòte sou aparèy sa a.",
-        tooBig: "Vokal la two lou. Eseye yon vokal pi kout.", playErr: "Pa kapab jwe vokal la." },
+        tooBig: "Vokal la two lou. Eseye yon vokal pi kout.", playErr: "Pa kapab jwe vokal la.",
+        attach: "Voye yon foto", discardPhoto: "Jete foto a" },
   fr: { login: "Se connecter", signup: "Créer un compte", name: "Votre nom", email: "E-mail", password: "Mot de passe (6 caractères min.)",
         toSignup: "Pas encore de compte ? Créez-en un", toLogin: "Déjà un compte ? Connectez-vous", forgot: "Mot de passe oublié ?",
         logout: "Déconnexion", hello: "Bonjour", placeholder: "Écrivez un message...", send: "Envoyer", left: "caractères restants",
@@ -37,7 +38,8 @@ const L = {
         mic: "Enregistrer un vocal", cancel: "Annuler", discard: "Supprimer le vocal",
         micDenied: "Micro bloqué. Autorisez-le dans les paramètres du navigateur.",
         micUnsupported: "L'enregistrement vocal n'est pas pris en charge sur cet appareil.",
-        tooBig: "Le vocal est trop lourd. Essayez un vocal plus court.", playErr: "Impossible de lire le vocal." },
+        tooBig: "Le vocal est trop lourd. Essayez un vocal plus court.", playErr: "Impossible de lire le vocal.",
+        attach: "Envoyer une photo", discardPhoto: "Supprimer la photo" },
   en: { login: "Log in", signup: "Create an account", name: "Your name", email: "Email", password: "Password (min. 6 characters)",
         toSignup: "No account yet? Create one", toLogin: "Already have an account? Log in", forgot: "Forgot password?",
         logout: "Log out", hello: "Hello", placeholder: "Write a message...", send: "Send", left: "characters left",
@@ -49,7 +51,8 @@ const L = {
         mic: "Record a voice message", cancel: "Cancel", discard: "Discard voice message",
         micDenied: "Microphone blocked. Allow it in your browser settings.",
         micUnsupported: "Voice recording is not supported on this device.",
-        tooBig: "Voice message too large. Try a shorter one.", playErr: "Unable to play the voice message." },
+        tooBig: "Voice message too large. Try a shorter one.", playErr: "Unable to play the voice message.",
+        attach: "Send a photo", discardPhoto: "Discard photo" },
   es: { login: "Iniciar sesión", signup: "Crear una cuenta", name: "Tu nombre", email: "Correo", password: "Contraseña (mín. 6 caracteres)",
         toSignup: "¿Aún no tienes cuenta? Crea una", toLogin: "¿Ya tienes cuenta? Inicia sesión", forgot: "¿Olvidaste tu contraseña?",
         logout: "Salir", hello: "Hola", placeholder: "Escribe un mensaje...", send: "Enviar", left: "caracteres restantes",
@@ -61,7 +64,8 @@ const L = {
         mic: "Grabar un audio", cancel: "Cancelar", discard: "Descartar audio",
         micDenied: "Micrófono bloqueado. Permítelo en los ajustes del navegador.",
         micUnsupported: "La grabación de audio no es compatible con este dispositivo.",
-        tooBig: "El audio es demasiado pesado. Prueba uno más corto.", playErr: "No se pudo reproducir el audio." }
+        tooBig: "El audio es demasiado pesado. Prueba uno más corto.", playErr: "No se pudo reproducir el audio.",
+        attach: "Enviar una foto", discardPhoto: "Descartar foto" }
 };
 
 const RP = {
@@ -101,10 +105,13 @@ let info = "";
 let loaded = false;
 let forceScroll = true;
 let editing = false;
+let emojiOpen = false;
 const ed = { name: "", bio: "", photo: "", msg: "", saving: false };
+const pic = { state: "idle", full: "", thumb: "", err: "" };
 const reportedIds = {};
 const profiles = {};
 const pendingProf = {};
+const imgCache = {};
 let renderTimer = null;
 
 const rec = { state: "idle", mr: null, stream: null, chunks: [], t0: 0, tick: null, blob: null, url: "", dur: 0, mime: "", err: "" };
@@ -132,6 +139,13 @@ function input(type, placeholder, auto) {
   i.autocomplete = auto;
   return i;
 }
+function icon(path) {
+  return '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">' + path + "</svg>";
+}
+const MIC_SVG = icon('<path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/>');
+const SEND_SVG = icon('<path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/>');
+const CAM_SVG = icon('<circle cx="12" cy="12" r="3.2"/><path d="M9 2 7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3.17L15 2H9zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"/>');
+
 function fmt(sec) {
   sec = Math.max(0, Math.round(sec));
   return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
@@ -161,6 +175,86 @@ function dayLabel(d) {
   if (sameDay(d, now)) return s.today;
   if (sameDay(d, y)) return s.yesterday;
   return d.toLocaleDateString(loc(), { day: "numeric", month: "long", year: "numeric" });
+}
+
+/* ---------- Imaj ---------- */
+function loadImage(file) {
+  return new Promise(function (res, rej) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function () { URL.revokeObjectURL(url); res(img); };
+    img.onerror = function () { URL.revokeObjectURL(url); rej(new Error("img")); };
+    img.src = url;
+  });
+}
+async function makeChatImage(file) {
+  const img = await loadImage(file);
+  function draw(max, q) {
+    const k = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(img.width * k));
+    c.height = Math.max(1, Math.round(img.height * k));
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", q).split(",")[1];
+  }
+  let full = "";
+  const tf = [[1280, 0.72], [1024, 0.6], [800, 0.5]];
+  for (let i = 0; i < tf.length; i++) {
+    full = draw(tf[i][0], tf[i][1]);
+    if (full.length <= 700000) break;
+  }
+  if (full.length > 700000) throw new Error("big");
+  let thumb = "";
+  const tt = [[320, 0.6], [240, 0.5], [160, 0.5]];
+  for (let i = 0; i < tt.length; i++) {
+    thumb = draw(tt[i][0], tt[i][1]);
+    if (thumb.length <= 38000) break;
+  }
+  if (thumb.length > 38000) throw new Error("big");
+  return { full: full, thumb: thumb };
+}
+function resetPic() { pic.state = "idle"; pic.full = ""; pic.thumb = ""; pic.err = ""; }
+async function sendPhoto() {
+  if (!user || pic.state !== "review") return;
+  pic.state = "sending";
+  pic.err = "";
+  renderBottom();
+  try {
+    const postRef = doc(collection(db, "posts"));
+    const b = writeBatch(db);
+    b.set(doc(db, "images", postRef.id), { uid: user.uid, data: pic.full, createdAt: serverTimestamp() });
+    b.set(postRef, {
+      uid: user.uid,
+      name: (user.displayName || "").slice(0, 40) || "?",
+      type: "image",
+      thumb: pic.thumb,
+      createdAt: serverTimestamp()
+    });
+    forceScroll = true;
+    await b.commit();
+    resetPic();
+  } catch (e) {
+    pic.state = "review";
+    pic.err = t().generic;
+  }
+  renderBottom();
+}
+async function openPhoto(p) {
+  const o = el("div", "klight");
+  const im = document.createElement("img");
+  im.src = imgCache[p.id] || ("data:image/jpeg;base64," + (p.thumb || ""));
+  o.appendChild(im);
+  o.onclick = function () { o.remove(); };
+  document.body.appendChild(o);
+  if (!imgCache[p.id]) {
+    try {
+      const snap = await getDoc(doc(db, "images", p.id));
+      if (snap.exists()) {
+        imgCache[p.id] = "data:image/jpeg;base64," + snap.data().data;
+        im.src = imgCache[p.id];
+      }
+    } catch (e) {}
+  }
 }
 
 /* ---------- Pwofil ---------- */
@@ -212,15 +306,6 @@ function openProfile(uid, fallback) {
     o.appendChild(box);
     o.onclick = function (e) { if (e.target === o) o.remove(); };
     document.body.appendChild(o);
-  });
-}
-function loadImage(file) {
-  return new Promise(function (res, rej) {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = function () { URL.revokeObjectURL(url); res(img); };
-    img.onerror = function () { URL.revokeObjectURL(url); rej(new Error("img")); };
-    img.src = url;
   });
 }
 async function avatarFromFile(file) {
@@ -626,114 +711,7 @@ function renderTop() {
   if (editing) top.appendChild(editorBox());
 }
 
-function renderBottomOld() {
-  const s = t();
-  bottom.textContent = "";
-  if (!user) return;
-
-  if (rec.state === "recording" || rec.state === "stopping") {
-    const row = el("div", "krec");
-    row.appendChild(el("span", "krecdot"));
-    row.appendChild(el("span", "krectime", "0:00 / " + fmt(MAX_SEC)));
-    const c = el("button", "kmic", "✕");
-    c.type = "button";
-    c.setAttribute("aria-label", s.cancel);
-    c.onclick = cancelRec;
-    const st = el("button", "ksend", "■");
-    st.type = "button";
-    st.onclick = stopRec;
-    row.appendChild(c);
-    row.appendChild(st);
-    bottom.appendChild(row);
-    tickUI();
-    return;
-  }
-
-  if (rec.state === "review" || rec.state === "sending") {
-    const sending = rec.state === "sending";
-    const row = el("div", "kreview");
-    const d = el("button", "kmic", "🗑");
-    d.type = "button";
-    d.disabled = sending;
-    d.setAttribute("aria-label", s.discard);
-    d.onclick = function () { resetRec(); renderBottom(); };
-    const au = document.createElement("audio");
-    au.controls = true;
-    au.src = rec.url;
-    const sd = el("button", "ksend", sending ? "…" : "➤");
-    sd.type = "button";
-    sd.disabled = sending;
-    sd.setAttribute("aria-label", s.send);
-    sd.onclick = sendVoice;
-    row.appendChild(d);
-    row.appendChild(au);
-    row.appendChild(sd);
-    bottom.appendChild(row);
-    if (rec.err) bottom.appendChild(el("p", "knote", rec.err));
-    return;
-  }
-
-  const row = el("div", "kcomposer");
-  const ta = document.createElement("textarea");
-  ta.rows = 1;
-  ta.maxLength = MAX;
-  ta.placeholder = s.placeholder;
-  ta.value = draft;
-  const mic = el("button", "kmic", "🎤");
-  mic.type = "button";
-  mic.setAttribute("aria-label", s.mic);
-  mic.onclick = startRec;
-  const send = el("button", "ksend", "➤");
-  send.type = "button";
-  send.setAttribute("aria-label", s.send);
-  row.appendChild(ta);
-  row.appendChild(mic);
-  row.appendChild(send);
-  const line = el("div", "kcount");
-  bottom.appendChild(row);
-  bottom.appendChild(line);
-  if (rec.err) bottom.appendChild(el("p", "knote", rec.err));
-
-  function grow() {
-    ta.style.height = "auto";
-    ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
-  }
-  function upd() {
-    const left = MAX - ta.value.length;
-    line.className = "kcount";
-    line.textContent = left <= 200 ? left + " " + s.left : "";
-  }
-  ta.addEventListener("input", function () { draft = ta.value; grow(); upd(); });
-  setTimeout(grow, 0);
-  upd();
-
-  send.onclick = async function () {
-    const text = ta.value.trim();
-    if (!text || text.length > MAX) return;
-    send.disabled = true;
-    try {
-      forceScroll = true;
-      await addDoc(collection(db, "posts"), {
-        uid: user.uid,
-        name: (user.displayName || "").slice(0, 40) || "?",
-        type: "text",
-        text: text,
-        createdAt: serverTimestamp()
-      });
-      draft = "";
-      ta.value = "";
-      grow();
-      upd();
-    } catch (e) {
-      line.className = "knote";
-      line.textContent = s.generic;
-    }
-    send.disabled = false;
-  };
-}
-
 const EMOJIS = ["🙏", "❤️", "😊", "😇", "🙌", "✝️", "🕊️", "📖", "🔥", "✨", "👍", "👏", "😂", "😢", "😍", "🥰", "😮", "🤗", "💪", "🌟", "🌹", "🎉", "😅", "🤝", "😉", "😌", "🙂", "😁", "😎", "🤲", "💛", "😭", "🙄", "😴", "🤔", "👋", "💐", "☀️", "🌈", "😔"];
-let emojiOpen = false;
 
 function renderBottom() {
   const s = t();
@@ -769,7 +747,8 @@ function renderBottom() {
     const au = document.createElement("audio");
     au.controls = true;
     au.src = rec.url;
-    const sd = el("button", "ksend", sending ? "…" : "➤");
+    const sd = el("button", "ksend");
+    sd.innerHTML = sending ? "…" : SEND_SVG;
     sd.type = "button";
     sd.disabled = sending;
     sd.setAttribute("aria-label", s.send);
@@ -779,6 +758,33 @@ function renderBottom() {
     vrow.appendChild(sd);
     bottom.appendChild(vrow);
     if (rec.err) bottom.appendChild(el("p", "knote", rec.err));
+    return;
+  }
+
+  if (pic.state === "review" || pic.state === "sending") {
+    const sending = pic.state === "sending";
+    const prow = el("div", "kreview");
+    const d = el("button", "kmic", "🗑");
+    d.type = "button";
+    d.disabled = sending;
+    d.setAttribute("aria-label", s.discardPhoto);
+    d.onclick = function () { resetPic(); renderBottom(); };
+    const pv = el("div", "kpreview");
+    const im = document.createElement("img");
+    im.src = "data:image/jpeg;base64," + pic.thumb;
+    im.alt = "";
+    pv.appendChild(im);
+    const sd = el("button", "ksend");
+    sd.innerHTML = sending ? "…" : SEND_SVG;
+    sd.type = "button";
+    sd.disabled = sending;
+    sd.setAttribute("aria-label", s.send);
+    sd.onclick = sendPhoto;
+    prow.appendChild(d);
+    prow.appendChild(pv);
+    prow.appendChild(sd);
+    bottom.appendChild(prow);
+    if (pic.err) bottom.appendChild(el("p", "knote", pic.err));
     return;
   }
 
@@ -815,8 +821,37 @@ function renderBottom() {
   const emo = el("button", "kemo", emojiOpen ? "⌨️" : "😊");
   emo.type = "button";
   emo.onclick = function () { draft = ta.value; emojiOpen = !emojiOpen; renderBottom(); };
+
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/*";
+  file.style.display = "none";
+  file.onchange = async function () {
+    const f = file.files[0];
+    if (!f) return;
+    draft = ta.value;
+    try {
+      const r = await makeChatImage(f);
+      pic.full = r.full;
+      pic.thumb = r.thumb;
+      pic.state = "review";
+      pic.err = "";
+    } catch (e) {
+      pic.state = "idle";
+      pic.err = pt().photoErr;
+    }
+    renderBottom();
+  };
+  const cam = el("button", "kemo");
+  cam.innerHTML = CAM_SVG;
+  cam.type = "button";
+  cam.setAttribute("aria-label", s.attach);
+  cam.onclick = function () { file.click(); };
+
   pill.appendChild(emo);
   pill.appendChild(ta);
+  pill.appendChild(cam);
+  pill.appendChild(file);
   const round = el("button", "ksend");
   round.type = "button";
   row.appendChild(pill);
@@ -825,6 +860,7 @@ function renderBottom() {
   bottom.appendChild(row);
   bottom.appendChild(line);
   if (rec.err) bottom.appendChild(el("p", "knote", rec.err));
+  if (pic.err) bottom.appendChild(el("p", "knote", pic.err));
 
   function grow() {
     ta.style.height = "auto";
@@ -837,7 +873,7 @@ function renderBottom() {
   }
   function setRound() {
     const has = ta.value.trim().length > 0;
-    round.textContent = has ? "➤" : "🎤";
+    round.innerHTML = has ? SEND_SVG : MIC_SVG;
     round.setAttribute("aria-label", has ? s.send : s.mic);
   }
   ta.addEventListener("input", function () { draft = ta.value; grow(); upd(); setRound(); });
@@ -869,7 +905,8 @@ function renderBottom() {
     }
     round.disabled = false;
   };
-    }
+}
+
 function renderFeed() {
   const s = t();
   const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 150;
@@ -914,6 +951,13 @@ function renderFeed() {
       row.appendChild(prog);
       row.appendChild(tm);
       msg.appendChild(row);
+    } else if (p.type === "image") {
+      const im = document.createElement("img");
+      im.className = "kimg";
+      im.src = "data:image/jpeg;base64," + (p.thumb || "");
+      im.alt = "";
+      im.onclick = function () { openPhoto(p); };
+      msg.appendChild(im);
     } else {
       msg.appendChild(el("div", "ktext", p.text || ""));
     }
@@ -924,11 +968,11 @@ function renderFeed() {
       d.onclick = async function () {
         if (!confirm(s.confirmDel)) return;
         try {
-          if (p.type === "voice") {
-            if (cur.id === p.id && cur.audio) cur.audio.pause();
+          if (p.type === "voice" || p.type === "image") {
+            if (p.type === "voice" && cur.id === p.id && cur.audio) cur.audio.pause();
             const b = writeBatch(db);
             b.delete(doc(db, "posts", p.id));
-            b.delete(doc(db, "audios", p.id));
+            b.delete(doc(db, p.type === "voice" ? "audios" : "images", p.id));
             await b.commit();
           } else {
             await deleteDoc(doc(db, "posts", p.id));
@@ -975,6 +1019,8 @@ onAuthStateChanged(auth, function (u) {
   note = ""; info = "";
   forceScroll = true;
   editing = false;
+  emojiOpen = false;
+  resetPic();
   if (!u) {
     if (rec.state === "recording") cancelRec();
     else resetRec();
