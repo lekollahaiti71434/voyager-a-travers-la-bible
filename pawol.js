@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getFirestore, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
@@ -23,6 +23,8 @@ const L = {
 
 let docs = [];
 let state = "loading";
+const photoCache = {};
+const photoPending = {};
 
 function lang() {
   let l = "ht";
@@ -46,6 +48,32 @@ function localDate() {
   return n.getFullYear() + "-" + p(n.getMonth() + 1) + "-" + p(n.getDate());
 }
 
+function needPhoto(d) { return !!(d && d.photo && d.date); }
+function fetchPhoto(d, done) {
+  const k = "verse_" + d.date;
+  if (photoCache[k] !== undefined) { done(photoCache[k]); return; }
+  if (photoPending[k]) { photoPending[k].push(done); return; }
+  photoPending[k] = [done];
+  getDoc(doc(db, "media", k)).then(function (snap) {
+    photoCache[k] = snap.exists() && snap.data().data ? "data:image/jpeg;base64," + snap.data().data : "";
+  }).catch(function () {
+    photoCache[k] = "";
+  }).then(function () {
+    const list = photoPending[k] || [];
+    delete photoPending[k];
+    list.forEach(function (fn) { fn(photoCache[k]); });
+  });
+}
+function photoEl(d) {
+  const im = el("img", "vphoto");
+  im.alt = "";
+  im.style.display = "none";
+  fetchPhoto(d, function (src) {
+    if (src) { im.src = src; im.style.display = "block"; }
+  });
+  return im;
+}
+
 function renderHome() {
   const h = document.getElementById("akey-verse");
   if (!h) return;
@@ -54,6 +82,7 @@ function renderHome() {
   if (state !== "ok" || !docs.length) return;
   const d = docs[0];
   const card = el("div", "card");
+  if (needPhoto(d)) card.appendChild(photoEl(d));
   card.appendChild(el("div", "ref", t.today + " · " + (d.reference || "")));
   card.appendChild(el("p", "verse", pick(d, "verset")));
   h.appendChild(card);
@@ -69,6 +98,7 @@ function render() {
 
   const d = docs[0];
   const card = el("div", "card");
+  if (needPhoto(d)) card.appendChild(photoEl(d));
   card.appendChild(el("div", "ref", t.today + " · " + (d.reference || "")));
   card.appendChild(el("p", "verse", pick(d, "verset")));
   if (pick(d, "reflexion")) {
@@ -96,10 +126,16 @@ function render() {
     arch.appendChild(el("h3", "", t.archives));
     docs.slice(1).forEach(function (a) {
       const det = document.createElement("details");
-      det.appendChild(el("summary", "", (a.date || "") + " · " + (a.reference || "")));
+      const sm = el("summary", "", (a.date || "") + " · " + (a.reference || ""));
+      det.appendChild(sm);
       det.appendChild(el("p", "verse", pick(a, "verset")));
       if (pick(a, "reflexion")) det.appendChild(el("p", "", pick(a, "reflexion")));
       if (pick(a, "priye")) det.appendChild(el("p", "", pick(a, "priye")));
+      if (needPhoto(a)) {
+        det.addEventListener("toggle", function () {
+          if (det.open && !det.querySelector("img")) det.insertBefore(photoEl(a), sm.nextSibling);
+        });
+      }
       arch.appendChild(det);
     });
     root.appendChild(arch);
