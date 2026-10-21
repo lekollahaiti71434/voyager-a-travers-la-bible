@@ -64,14 +64,33 @@ const L = {
         tooBig: "El audio es demasiado pesado. Prueba uno más corto.", playErr: "No se pudo reproducir el audio." }
 };
 
-const COLORS = ["#b5651d", "#2a7a8c", "#8e44ad", "#c0392b", "#27ae60", "#2c3e50", "#d35400"];
 const RP = {
   ht: { report: "Siyale", confirmReport: "Siyale mesaj sa a bay administratè a?", reported: "Siyale ✓" },
   fr: { report: "Signaler", confirmReport: "Signaler ce message à l'administrateur ?", reported: "Signalé ✓" },
   en: { report: "Report", confirmReport: "Report this message to the administrator?", reported: "Reported ✓" },
   es: { report: "Denunciar", confirmReport: "¿Denunciar este mensaje al administrador?", reported: "Denunciado ✓" }
 };
-const reportedIds = {};
+
+const PL = {
+  ht: { myProfile: "Pwofil", editTitle: "Modifye pwofil mwen", fullName: "Non konplè", bio: "Deskripsyon (opsyonèl)",
+        bioPh: "Pale yon ti jan de ou...", choose: "Chwazi yon foto", removePhoto: "Retire foto a", save: "Anrejistre",
+        cancel: "Anile", saved: "Pwofil la anrejistre ✅", photoErr: "Foto a pa ka itilize. Eseye yon lòt.",
+        close: "Fèmen", noBio: "Pa gen deskripsyon.", left: "karaktè rete" },
+  fr: { myProfile: "Profil", editTitle: "Modifier mon profil", fullName: "Nom complet", bio: "Description (facultatif)",
+        bioPh: "Parlez un peu de vous...", choose: "Choisir une photo", removePhoto: "Retirer la photo", save: "Enregistrer",
+        cancel: "Annuler", saved: "Profil enregistré ✅", photoErr: "Photo inutilisable. Essayez-en une autre.",
+        close: "Fermer", noBio: "Aucune description.", left: "caractères restants" },
+  en: { myProfile: "Profile", editTitle: "Edit my profile", fullName: "Full name", bio: "Description (optional)",
+        bioPh: "Tell us a little about yourself...", choose: "Choose a photo", removePhoto: "Remove photo", save: "Save",
+        cancel: "Cancel", saved: "Profile saved ✅", photoErr: "Photo can't be used. Try another one.",
+        close: "Close", noBio: "No description.", left: "characters left" },
+  es: { myProfile: "Perfil", editTitle: "Editar mi perfil", fullName: "Nombre completo", bio: "Descripción (opcional)",
+        bioPh: "Cuéntanos un poco sobre ti...", choose: "Elegir una foto", removePhoto: "Quitar foto", save: "Guardar",
+        cancel: "Cancelar", saved: "Perfil guardado ✅", photoErr: "No se puede usar la foto. Prueba otra.",
+        close: "Cerrar", noBio: "Sin descripción.", left: "caracteres restantes" }
+};
+
+const COLORS = ["#b5651d", "#2a7a8c", "#8e44ad", "#c0392b", "#27ae60", "#2c3e50", "#d35400"];
 
 let mode = "login";
 let user = null;
@@ -81,6 +100,12 @@ let note = "";
 let info = "";
 let loaded = false;
 let forceScroll = true;
+let editing = false;
+const ed = { name: "", bio: "", photo: "", msg: "", saving: false };
+const reportedIds = {};
+const profiles = {};
+const pendingProf = {};
+let renderTimer = null;
 
 const rec = { state: "idle", mr: null, stream: null, chunks: [], t0: 0, tick: null, blob: null, url: "", dur: 0, mime: "", err: "" };
 const cache = {};
@@ -93,6 +118,7 @@ function lang() {
 }
 function loc() { return lang() === "ht" ? "fr" : lang(); }
 function t() { return L[lang()]; }
+function pt() { return PL[lang()]; }
 function el(tag, cls, text) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -135,6 +161,187 @@ function dayLabel(d) {
   if (sameDay(d, now)) return s.today;
   if (sameDay(d, y)) return s.yesterday;
   return d.toLocaleDateString(loc(), { day: "numeric", month: "long", year: "numeric" });
+}
+
+/* ---------- Pwofil ---------- */
+function scheduleRender() {
+  if (renderTimer) return;
+  renderTimer = setTimeout(function () {
+    renderTimer = null;
+    if (user && !editing) renderTop();
+    renderFeed();
+  }, 0);
+}
+function fetchProfile(uid) {
+  if (uid in profiles) return Promise.resolve();
+  if (pendingProf[uid]) return pendingProf[uid];
+  pendingProf[uid] = getDoc(doc(db, "profiles", uid))
+    .then(function (s) { profiles[uid] = s.exists() ? s.data() : null; })
+    .catch(function () { profiles[uid] = null; })
+    .then(function () { delete pendingProf[uid]; scheduleRender(); });
+  return pendingProf[uid];
+}
+function avatar(uid, name, cls) {
+  const a = el("div", "kav" + (cls ? " " + cls : ""));
+  const pr = profiles[uid];
+  if (pr && pr.photo) {
+    const im = document.createElement("img");
+    im.src = "data:image/jpeg;base64," + pr.photo;
+    im.alt = "";
+    a.appendChild(im);
+  } else {
+    a.textContent = ((name || "?").trim().charAt(0) || "?").toUpperCase();
+    a.style.background = colorFor(name || "?");
+  }
+  return a;
+}
+function openProfile(uid, fallback) {
+  fetchProfile(uid).then(function () {
+    const pr = profiles[uid];
+    const s = pt();
+    const shown = (pr && pr.name) || fallback || "?";
+    const o = el("div", "kmodal");
+    const box = el("div", "kbox");
+    box.appendChild(avatar(uid, shown, "big"));
+    box.appendChild(el("h3", "", shown));
+    box.appendChild(el("p", "", (pr && pr.bio) || s.noBio));
+    const c = el("button", "kbtn", s.close);
+    c.type = "button";
+    c.onclick = function () { o.remove(); };
+    box.appendChild(c);
+    o.appendChild(box);
+    o.onclick = function (e) { if (e.target === o) o.remove(); };
+    document.body.appendChild(o);
+  });
+}
+function loadImage(file) {
+  return new Promise(function (res, rej) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function () { URL.revokeObjectURL(url); res(img); };
+    img.onerror = function () { URL.revokeObjectURL(url); rej(new Error("img")); };
+    img.src = url;
+  });
+}
+async function avatarFromFile(file) {
+  const img = await loadImage(file);
+  const size = Math.min(img.width, img.height);
+  const sx = (img.width - size) / 2;
+  const sy = (img.height - size) / 2;
+  const tries = [[160, 0.72], [128, 0.6], [96, 0.5]];
+  for (let i = 0; i < tries.length; i++) {
+    const d = tries[i][0];
+    const c = document.createElement("canvas");
+    c.width = d;
+    c.height = d;
+    c.getContext("2d").drawImage(img, sx, sy, size, size, 0, 0, d, d);
+    const data = c.toDataURL("image/jpeg", tries[i][1]).split(",")[1];
+    if (data.length <= 50000) return data;
+  }
+  throw new Error("big");
+}
+async function openEditor() {
+  if (!user) return;
+  await fetchProfile(user.uid);
+  const pr = profiles[user.uid] || {};
+  ed.name = pr.name || user.displayName || "";
+  ed.bio = pr.bio || "";
+  ed.photo = pr.photo || "";
+  ed.msg = "";
+  ed.saving = false;
+  editing = true;
+  renderTop();
+}
+async function saveProfile() {
+  const s = t();
+  const name = ed.name.trim();
+  if (name.length < 2 || name.length > 40) { ed.msg = s.nameReq; renderTop(); return; }
+  ed.saving = true;
+  ed.msg = "";
+  renderTop();
+  try {
+    const bio = ed.bio.trim().slice(0, 200);
+    await updateProfile(auth.currentUser, { displayName: name });
+    await setDoc(doc(db, "profiles", user.uid), { name: name, bio: bio, photo: ed.photo || "", updatedAt: serverTimestamp() });
+    profiles[user.uid] = { name: name, bio: bio, photo: ed.photo || "" };
+    user = auth.currentUser;
+    editing = false;
+    ed.saving = false;
+    renderTop();
+    renderFeed();
+  } catch (e) {
+    ed.saving = false;
+    ed.msg = s.generic;
+    renderTop();
+  }
+}
+function editorBox() {
+  const s = pt();
+  const box = el("div", "kprof");
+  box.appendChild(el("h3", "", s.editTitle));
+
+  const av = el("div", "kav big");
+  if (ed.photo) {
+    const im = document.createElement("img");
+    im.src = "data:image/jpeg;base64," + ed.photo;
+    av.appendChild(im);
+  } else {
+    av.textContent = ((ed.name || "?").trim().charAt(0) || "?").toUpperCase();
+    av.style.background = colorFor(ed.name || "?");
+  }
+  box.appendChild(av);
+
+  const pick = document.createElement("input");
+  pick.type = "file";
+  pick.accept = "image/*";
+  pick.setAttribute("aria-label", s.choose);
+  pick.onchange = async function () {
+    const f = pick.files[0];
+    if (!f) return;
+    try { ed.photo = await avatarFromFile(f); ed.msg = ""; }
+    catch (e) { ed.msg = s.photoErr; }
+    renderTop();
+  };
+  box.appendChild(pick);
+  if (ed.photo) {
+    const rm = el("button", "kbtn", s.removePhoto);
+    rm.type = "button";
+    rm.onclick = function () { ed.photo = ""; renderTop(); };
+    box.appendChild(rm);
+  }
+
+  box.appendChild(el("label", "", s.fullName));
+  const nm = document.createElement("input");
+  nm.type = "text";
+  nm.maxLength = 40;
+  nm.value = ed.name;
+  nm.oninput = function () { ed.name = nm.value; };
+  box.appendChild(nm);
+
+  box.appendChild(el("label", "", s.bio));
+  const bi = document.createElement("textarea");
+  bi.maxLength = 200;
+  bi.placeholder = s.bioPh;
+  bi.value = ed.bio;
+  const cnt = el("div", "kcount");
+  function upd() { cnt.textContent = (200 - bi.value.length) + " " + s.left; }
+  bi.oninput = function () { ed.bio = bi.value; upd(); };
+  upd();
+  box.appendChild(bi);
+  box.appendChild(cnt);
+
+  const sv = el("button", "kbtn", s.save);
+  sv.type = "button";
+  sv.disabled = ed.saving;
+  sv.onclick = saveProfile;
+  const cn = el("button", "kbtn", s.cancel);
+  cn.type = "button";
+  cn.disabled = ed.saving;
+  cn.onclick = function () { editing = false; renderTop(); };
+  box.appendChild(sv);
+  box.appendChild(cn);
+  if (ed.msg) box.appendChild(el("p", "knote", ed.msg));
+  return box;
 }
 
 /* ---------- Vokal: anrejistreman ---------- */
@@ -328,6 +535,7 @@ function renderTop() {
   const s = t();
   top.textContent = "";
   root.classList.toggle("kout", !user);
+  root.classList.toggle("kedit", !!(user && editing));
 
   if (!user) {
     top.appendChild(el("h3", "", mode === "login" ? s.login : s.signup));
@@ -393,14 +601,29 @@ function renderTop() {
     return;
   }
 
+  const myName = (profiles[user.uid] && profiles[user.uid].name) || user.displayName || "";
   const bar = el("div", "kbar");
-  bar.appendChild(el("div", "", s.hello + ", " + (user.displayName || "")));
+  const left = el("div", "kleft");
+  const av = avatar(user.uid, myName, "mid");
+  av.style.cursor = "pointer";
+  av.onclick = openEditor;
+  left.appendChild(av);
+  left.appendChild(el("span", "", myName));
+  const right = el("div", "kright");
+  const pb = el("button", "kbtn", pt().myProfile);
+  pb.type = "button";
+  pb.style.margin = "0";
+  pb.onclick = openEditor;
   const out = el("button", "kbtn", s.logout);
   out.type = "button";
   out.style.margin = "0";
   out.onclick = function () { signOut(auth); };
-  bar.appendChild(out);
+  right.appendChild(pb);
+  right.appendChild(out);
+  bar.appendChild(left);
+  bar.appendChild(right);
   top.appendChild(bar);
+  if (editing) top.appendChild(editorBox());
 }
 
 function renderBottom() {
@@ -526,9 +749,15 @@ function renderFeed() {
     const own = !!(user && user.uid === p.uid);
     const msg = el("div", "kmsg" + (own ? " own" : ""));
     if (!own) {
-      const n = el("div", "kname", p.name || "?");
-      n.style.color = colorFor(p.name || "?");
-      msg.appendChild(n);
+      fetchProfile(p.uid);
+      const shown = (profiles[p.uid] && profiles[p.uid].name) || p.name || "?";
+      const head = el("div", "khead");
+      head.appendChild(avatar(p.uid, shown));
+      const n = el("div", "kname", shown);
+      n.style.color = colorFor(shown);
+      head.appendChild(n);
+      head.onclick = function () { openProfile(p.uid, shown); };
+      msg.appendChild(head);
     }
     if (p.type === "voice") {
       const row = el("div", "kvoice");
@@ -590,7 +819,7 @@ function renderFeed() {
         } catch (e) {}
       };
       foot.appendChild(rb);
-  }
+    }
     foot.appendChild(el("span", "", dt ? dt.toLocaleTimeString(loc(), { hour: "2-digit", minute: "2-digit" }) : ""));
     msg.appendChild(foot);
     feed.appendChild(msg);
@@ -607,11 +836,14 @@ onAuthStateChanged(auth, function (u) {
   user = u;
   note = ""; info = "";
   forceScroll = true;
+  editing = false;
   if (!u) {
     if (rec.state === "recording") cancelRec();
     else resetRec();
     if (cur.audio) cur.audio.pause();
     cur = { id: null, audio: null, loading: false };
+  } else {
+    fetchProfile(u.uid);
   }
   renderTop();
   renderBottom();
