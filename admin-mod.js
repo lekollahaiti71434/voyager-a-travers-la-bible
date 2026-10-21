@@ -52,7 +52,13 @@ async function loadReports() {
       const p = ps.data();
       const card = el("div", "card");
       card.appendChild(el("div", "ref", (p.name || "?") + " · " + g.ids.length + " siyalman"));
-      card.appendChild(el("p", "verse", p.type === "voice" ? "🎤 Vokal (" + Math.round(p.duration || 0) + " s)" : (p.text || "")));
+      card.appendChild(el("p", "verse", p.type === "voice" ? "🎤 Vokal (" + Math.round(p.duration || 0) + " s)" : (p.type === "image" ? "🖼️ Foto" : (p.text || ""))));
+      if (p.type === "image" && p.thumb) {
+        const im = document.createElement("img");
+        im.src = "data:image/jpeg;base64," + p.thumb;
+        im.style.cssText = "max-width:180px;border-radius:8px;display:block;margin:8px 0";
+        card.appendChild(im);
+      }
 
       const del = el("button", "btn danger", "Efase mesaj");
       del.type = "button";
@@ -61,6 +67,7 @@ async function loadReports() {
         const b = writeBatch(db);
         b.delete(doc(db, "posts", g.postId));
         if (p.type === "voice") b.delete(doc(db, "audios", g.postId));
+        if (p.type === "image") b.delete(doc(db, "images", g.postId));
         g.ids.forEach(function (id) { b.delete(doc(db, "reports", id)); });
         await b.commit();
         loadReports();
