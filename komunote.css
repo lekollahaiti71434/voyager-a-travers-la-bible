@@ -67,3 +67,10 @@
 .kpreview img { max-height:70px; border-radius:8px; }
 .klight { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:9999; display:flex; align-items:center; justify-content:center; padding:10px; }
 .klight img { max-width:100%; max-height:100%; border-radius:6px; }
+.kbottom .kcomposer { display:flex; align-items:flex-end; gap:8px; }
+.kbottom .kpill { flex:1 1 auto; min-width:0; display:flex; align-items:flex-end; background:#fff; border:1px solid #c9a24a; border-radius:24px; padding:0 4px; }
+.kbottom .kpill textarea { flex:1 1 auto; width:auto; min-width:0; border:0; outline:0; background:transparent; border-radius:0; margin:0; padding:12px 6px; min-height:44px; max-height:120px; resize:none; }
+.kbottom .kemo { flex:none; width:40px; height:44px; padding:0; margin:0; background:none; border:0; color:#666; display:flex; align-items:center; justify-content:center; }
+.kbottom .ksend { flex:none; width:48px; height:48px; min-width:48px; padding:0; margin:0; border:0; border-radius:50%; background:#c9a24a; color:#111; display:flex; align-items:center; justify-content:center; position:static; transform:none; line-height:1; font-size:1rem; }
+.kbottom .ksend svg { width:24px; height:24px; display:block; margin:0 0 0 2px; }
+.kbottom .kemo svg { width:22px; height:22px; display:block; margin:0; }
