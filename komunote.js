@@ -626,7 +626,7 @@ function renderTop() {
   if (editing) top.appendChild(editorBox());
 }
 
-function renderBottom() {
+function renderBottomOld() {
   const s = t();
   bottom.textContent = "";
   if (!user) return;
@@ -732,6 +732,144 @@ function renderBottom() {
   };
 }
 
+const EMOJIS = ["🙏", "❤️", "😊", "😇", "🙌", "✝️", "🕊️", "📖", "🔥", "✨", "👍", "👏", "😂", "😢", "😍", "🥰", "😮", "🤗", "💪", "🌟", "🌹", "🎉", "😅", "🤝", "😉", "😌", "🙂", "😁", "😎", "🤲", "💛", "😭", "🙄", "😴", "🤔", "👋", "💐", "☀️", "🌈", "😔"];
+let emojiOpen = false;
+
+function renderBottom() {
+  const s = t();
+  bottom.textContent = "";
+  if (!user) return;
+
+  if (rec.state === "recording" || rec.state === "stopping") {
+    const rrow = el("div", "krec");
+    rrow.appendChild(el("span", "krecdot"));
+    rrow.appendChild(el("span", "krectime", "0:00 / " + fmt(MAX_SEC)));
+    const c = el("button", "kmic", "✕");
+    c.type = "button";
+    c.setAttribute("aria-label", s.cancel);
+    c.onclick = cancelRec;
+    const st = el("button", "ksend", "■");
+    st.type = "button";
+    st.onclick = stopRec;
+    rrow.appendChild(c);
+    rrow.appendChild(st);
+    bottom.appendChild(rrow);
+    tickUI();
+    return;
+  }
+
+  if (rec.state === "review" || rec.state === "sending") {
+    const sending = rec.state === "sending";
+    const vrow = el("div", "kreview");
+    const d = el("button", "kmic", "🗑");
+    d.type = "button";
+    d.disabled = sending;
+    d.setAttribute("aria-label", s.discard);
+    d.onclick = function () { resetRec(); renderBottom(); };
+    const au = document.createElement("audio");
+    au.controls = true;
+    au.src = rec.url;
+    const sd = el("button", "ksend", sending ? "…" : "➤");
+    sd.type = "button";
+    sd.disabled = sending;
+    sd.setAttribute("aria-label", s.send);
+    sd.onclick = sendVoice;
+    vrow.appendChild(d);
+    vrow.appendChild(au);
+    vrow.appendChild(sd);
+    bottom.appendChild(vrow);
+    if (rec.err) bottom.appendChild(el("p", "knote", rec.err));
+    return;
+  }
+
+  const ta = document.createElement("textarea");
+  ta.rows = 1;
+  ta.maxLength = MAX;
+  ta.placeholder = s.placeholder;
+  ta.value = draft;
+
+  if (emojiOpen) {
+    const grid = el("div", "kemojis");
+    EMOJIS.forEach(function (em) {
+      const b = el("button", "", em);
+      b.type = "button";
+      b.onclick = function () {
+        const a = ta.selectionStart == null ? ta.value.length : ta.selectionStart;
+        const z = ta.selectionEnd == null ? a : ta.selectionEnd;
+        if (ta.value.length - (z - a) + em.length > MAX) return;
+        ta.value = ta.value.slice(0, a) + em + ta.value.slice(z);
+        const pos = a + em.length;
+        ta.setSelectionRange(pos, pos);
+        draft = ta.value;
+        grow();
+        upd();
+        setRound();
+      };
+      grid.appendChild(b);
+    });
+    bottom.appendChild(grid);
+  }
+
+  const row = el("div", "kcomposer");
+  const pill = el("div", "kpill");
+  const emo = el("button", "kemo", emojiOpen ? "⌨️" : "😊");
+  emo.type = "button";
+  emo.onclick = function () { draft = ta.value; emojiOpen = !emojiOpen; renderBottom(); };
+  pill.appendChild(emo);
+  pill.appendChild(ta);
+  const round = el("button", "ksend");
+  round.type = "button";
+  row.appendChild(pill);
+  row.appendChild(round);
+  const line = el("div", "kcount");
+  bottom.appendChild(row);
+  bottom.appendChild(line);
+  if (rec.err) bottom.appendChild(el("p", "knote", rec.err));
+
+  function grow() {
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+  }
+  function upd() {
+    const left = MAX - ta.value.length;
+    line.className = "kcount";
+    line.textContent = left <= 200 ? left + " " + s.left : "";
+  }
+  function setRound() {
+    const has = ta.value.trim().length > 0;
+    round.textContent = has ? "➤" : "🎤";
+    round.setAttribute("aria-label", has ? s.send : s.mic);
+  }
+  ta.addEventListener("input", function () { draft = ta.value; grow(); upd(); setRound(); });
+  setTimeout(grow, 0);
+  upd();
+  setRound();
+
+  round.onclick = async function () {
+    const text = ta.value.trim();
+    if (!text) { startRec(); return; }
+    if (text.length > MAX) return;
+    round.disabled = true;
+    try {
+      forceScroll = true;
+      await addDoc(collection(db, "posts"), {
+        uid: user.uid,
+        name: (user.displayName || "").slice(0, 40) || "?",
+        type: "text",
+        text: text,
+        createdAt: serverTimestamp()
+      });
+      draft = "";
+      emojiOpen = false;
+      renderBottom();
+      return;
+    } catch (e) {
+      line.className = "knote";
+      line.textContent = s.generic;
+    }
+    round.disabled = false;
+  };
+    }
 function renderFeed() {
   const s = t();
   const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 150;
