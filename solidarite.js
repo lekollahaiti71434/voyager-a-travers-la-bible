@@ -315,9 +315,10 @@ function render() {
   if (!projects.length) { root.appendChild(el("p", "", s.empty)); }
   projects.forEach(function (p) { root.appendChild(card(p)); });
 
-  if (user && myDon.length) {
+  const shownDon = myDon.filter(function (d) { return projects.some(function (p) { return p.id === d.projectId; }); });
+  if (user && shownDon.length) {
     root.appendChild(el("h3", "", s.myDon));
-    myDon.slice().sort(function (a, b) { return tsMs(b.createdAt) - tsMs(a.createdAt); }).forEach(function (d) {
+    shownDon.slice().sort(function (a, b) { return tsMs(b.createdAt) - tsMs(a.createdAt); }).forEach(function (d) {
       const proj = projects.find(function (p) { return p.id === d.projectId; });
       const row = el("div", "sdon");
       row.appendChild(el("span", "", (proj ? pick(proj, "title") : "—") + " · " + money(d.amount)));
