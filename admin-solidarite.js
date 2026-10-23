@@ -308,9 +308,26 @@ async function loadProjects() {
       const del = el("button", "btn danger", "Efase");
       del.type = "button";
       del.onclick = async function () {
-        if (!confirm("Efase pwojè " + p.title + " ?")) return;
-        try { await deleteDoc(doc(db, "projects", p.id)); loadAll(); }
-        catch (e) { msg.textContent = "Erè: " + (e.code || e.message); }
+        const ok = confirm("Efase pwojè " + p.title + " ?\n\nTout don (prèv peman) ak rapò (foto) ki lye ak pwojè sa a ap efase tou. Sa pa ka anile.");
+        if (!ok) return;
+        try {
+          const refs = [];
+          const dons = await getDocs(query(collection(db, "donations"), where("projectId", "==", p.id)));
+          dons.forEach(function (d) { refs.push(d.ref); });
+          const ups = await getDocs(query(collection(db, "updates"), where("projectId", "==", p.id)));
+          ups.forEach(function (u) {
+            refs.push(u.ref);
+            const n = Number(u.data().photoCount) || 0;
+            for (let i = 0; i < n; i++) refs.push(doc(db, "media", u.id + "_" + i));
+          });
+          refs.push(doc(db, "projects", p.id));
+          for (let i = 0; i < refs.length; i += 400) {
+            const b = writeBatch(db);
+            refs.slice(i, i + 400).forEach(function (r) { b.delete(r); });
+            await b.commit();
+          }
+          loadAll();
+        } catch (e) { msg.textContent = "Erè: " + (e.code || e.message); }
       };
       btns.appendChild(ed);
       btns.appendChild(del);
@@ -325,6 +342,27 @@ async function loadProjects() {
 
 /* ---------- Don an atant ---------- */
 root.appendChild(el("h3", "", "Don an atant"));
+const cleanBtn = el("button", "btn danger", "Netwaye don ki pa gen pwojè ankò");
+cleanBtn.type = "button";
+cleanBtn.onclick = async function () {
+  try {
+    const snap = await getDocs(collection(db, "donations"));
+    const orphans = snap.docs.filter(function (d) {
+      return !projectsCache.some(function (p) { return p.id === d.data().projectId; });
+    });
+    if (!orphans.length) { alert("Pa gen don ki san pwojè."); return; }
+    if (!confirm("Efase " + orphans.length + " don ki pa gen pwojè ankò ?")) return;
+    for (let i = 0; i < orphans.length; i += 400) {
+      const b = writeBatch(db);
+      orphans.slice(i, i + 400).forEach(function (d) { b.delete(d.ref); });
+      await b.commit();
+    }
+    loadAll();
+  } catch (e) {
+    alert("Erè: " + (e.code || e.message));
+  }
+};
+root.appendChild(cleanBtn);
 const donBox = el("div");
 root.appendChild(donBox);
 
