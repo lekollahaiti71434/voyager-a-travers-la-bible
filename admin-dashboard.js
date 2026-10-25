@@ -118,7 +118,7 @@ function exportCsv() {
 
 function render() {
   box.textContent = "";
-  box.appendChild(el("h2", "", "Tableau de bord"));
+ box.appendChild(el("h2", "", "Tablo de bò")); 
 
   const chips = el("div", "dchips");
   [["all", "Tout"], ["30", "30 dènye jou"], ["7", "7 dènye jou"]].forEach(function (c) {
