@@ -84,3 +84,28 @@
 .kpreview img { max-height:120px; border-radius:8px; }
 .klight { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:9999; display:flex; align-items:center; justify-content:center; padding:10px; }
 .klight img { max-width:100%; max-height:100%; border-radius:6px; }
+.cswitch { display:flex; background:#efe9d8; border-radius:22px; padding:4px; margin:6px 0 12px; }
+.cswitch button { flex:1; border:none; background:transparent; padding:10px; border-radius:18px; font:inherit; font-size:.92rem; color:#555; }
+.cswitch button.on { background:#c9a24a; color:#fff; font-weight:bold; }
+.kchat .ktabs, .kchat .kfeed, .kchat .kfab { display:none !important; }
+.kchat { padding-bottom:0 !important; }
+.cchat { display:none; flex-direction:column; height:calc(100dvh - 350px); min-height:320px; }
+.kchat .cchat { display:flex; }
+.kedit .cswitch, .kedit .cchat { display:none !important; }
+.cfeed { flex:1; overflow-y:auto; background:#efe6d2; border-radius:10px; padding:10px 8px; display:flex; flex-direction:column; gap:4px; }
+.cday { align-self:center; background:#fff; color:#666; font-size:.72rem; padding:3px 10px; border-radius:10px; margin:8px 0; box-shadow:0 1px 1px rgba(0,0,0,.1); }
+.cmsg { max-width:82%; padding:6px 9px 4px; border-radius:10px; border-top-left-radius:2px; background:#fff; align-self:flex-start; box-shadow:0 1px 1px rgba(0,0,0,.12); }
+.cmsg.own { align-self:flex-end; background:#f6e9bf; border-top-left-radius:10px; border-top-right-radius:2px; }
+.chead { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+.cname { font-size:.78rem; font-weight:bold; }
+.ctext { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.4; font-size:.95rem; }
+.cfoot { display:flex; justify-content:flex-end; align-items:center; gap:8px; font-size:.68rem; color:#888; margin-top:2px; }
+.cdel { background:none; border:none; color:#a33; font-size:.68rem; padding:0; text-decoration:underline; }
+.cbottom { flex:none; padding-top:8px; }
+.ccomposer { display:flex; align-items:flex-end; gap:8px; }
+.cpill { flex:1 1 auto; min-width:0; display:flex; align-items:flex-end; background:#fff; border:1px solid #c9a24a; border-radius:24px; padding:0 4px; }
+.cpill textarea { flex:1 1 auto; width:auto; min-width:0; border:0; outline:0; background:transparent; margin:0; padding:12px 6px; min-height:44px; max-height:120px; resize:none; font:inherit; }
+.cemo { flex:none; width:40px; height:44px; border:0; background:none; font-size:1.3rem; padding:0; }
+.csend { flex:none; width:48px; height:48px; min-width:48px; border-radius:50%; border:0; background:#c9a24a; color:#111; display:flex; align-items:center; justify-content:center; padding:0; }
+.csend svg { width:24px; height:24px; display:block; margin-left:2px; }
+.cnote { text-align:center; color:#777; padding:14px 10px; font-size:.9rem; }
