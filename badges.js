@@ -17,6 +17,7 @@ const latest = { pawol: 0, komunote: 0, solidarite: 0 };
 let me = null;
 let authReady = false;
 let postsRaw = [];
+let chatRaw = [];
 let projMs = 0;
 let updMs = 0;
 
@@ -54,7 +55,7 @@ function refreshAll() { refresh("pawol"); refresh("komunote"); refresh("solidari
 
 function recomputePosts() {
   let m = 0;
-  postsRaw.forEach(function (p) {
+  postsRaw.concat(chatRaw).forEach(function (p) {
     if (!me || p.uid !== me.uid) { if (p.ms > m) m = p.ms; }
   });
   latest.komunote = m;
@@ -111,6 +112,17 @@ onSnapshot(
 );
 
 onSnapshot(
+  query(collection(db, "chat"), orderBy("createdAt", "desc"), limit(30)),
+  function (snap) {
+    chatRaw = snap.docs.map(function (d) {
+      const x = d.data({ serverTimestamps: "estimate" });
+      return { uid: x.uid, ms: ms(x.createdAt) };
+    });
+    recomputePosts();
+  },
+  function () {}
+);
+  onSnapshot(
   query(collection(db, "projects"), orderBy("createdAt", "desc"), limit(5)),
   function (snap) {
     let m = 0;
