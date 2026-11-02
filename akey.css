@@ -1,0 +1,36 @@
+html, body { overflow-x: hidden; }
+img { max-width: 100%; }
+
+.hero {
+  position: relative;
+  box-sizing: border-box;
+  margin: -20px -16px;
+  min-height: calc(100dvh - 130px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+  padding: 22px 18px;
+  color: #fff;
+  overflow: hidden;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 220' preserveAspectRatio='none'%3E%3Cpath d='M0 120 L60 80 L120 115 L190 60 L260 110 L330 75 L400 115 L400 220 L0 220Z' fill='%23506b86' opacity='.8'/%3E%3Cpath d='M0 150 L80 115 L150 145 L230 105 L310 140 L400 110 L400 220 L0 220Z' fill='%232f4a5e'/%3E%3Cpath d='M0 190 Q120 150 200 170 T400 160 L400 220 L0 220Z' fill='%231c3a2c'/%3E%3Cpath d='M185 220 Q205 195 190 180 Q178 168 200 160 Q214 170 206 182 Q222 196 235 220Z' fill='%23d9b36a' opacity='.55'/%3E%3C/svg%3E") bottom center / 100% 46% no-repeat,
+    radial-gradient(ellipse 70% 38% at 50% 60%, rgba(255,214,130,.95), rgba(255,214,130,0) 70%),
+    linear-gradient(180deg, #1c4f86 0%, #4f8cc4 30%, #f3d49a 62%, #f0b765 72%, #29415a 100%);
+}
+.hero.has-photo {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.28) 0%, rgba(0,0,0,.18) 40%, rgba(0,0,0,.65) 100%),
+    var(--photo) center / cover no-repeat;
+}
+.hero-top { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.hero-logo { display: block; width: min(74%, 270px); max-width: 270px; height: auto; background: #fff; border-radius: 24px; padding: 10px; box-sizing: border-box; box-shadow: 0 8px 28px rgba(0,0,0,.28); }
+.hero-tag { font-size: .95rem; letter-spacing: .5px; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+.hero-bottom { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 26px; }
+#akey-verse { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.hq-label { font-size: .7rem; letter-spacing: 2px; text-transform: uppercase; opacity: .92; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+.hq-text { font-style: italic; font-size: 1.12rem; line-height: 1.5; max-width: 30ch; text-shadow: 0 1px 8px rgba(0,0,0,.65); }
+.hq-ref { font-size: .85rem; text-shadow: 0 1px 6px rgba(0,0,0,.65); }
+.startbtn { width: 100%; max-width: 340px; padding: 16px; background: #d9a62e; color: #fff; border: none; border-radius: 30px; font: inherit; font-size: 1.1rem; font-weight: bold; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+.hero .sharelink { background: none; border: none; color: #fff; text-decoration: underline; font: inherit; font-size: .85rem; padding: 6px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
