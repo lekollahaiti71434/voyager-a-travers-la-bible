@@ -9,8 +9,9 @@
 <link rel="icon" href="/icon-192.png">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="pawol.css">
-  <link rel="stylesheet" href="komunote.css">
-  <link rel="stylesheet" href="solidarite.css">
+<link rel="stylesheet" href="komunote.css">
+<link rel="stylesheet" href="solidarite.css">
+<link rel="stylesheet" href="akey.css">
 </head>
 <body>
 <header>
@@ -20,10 +21,17 @@
 
 <main>
   <section id="akey" class="page active">
-    <h2 data-i18n="akey">Akèy</h2>
-    <p data-i18n="welcome"></p>
-    <div id="akey-verse"></div>
-    <button id="share-app" class="sharebtn" type="button" data-i18n="share"></button>
+    <div class="hero">
+      <div class="hero-top">
+        <img class="hero-logo" src="/icon-512.png" alt="Voyager à travers la Bible">
+        <p class="hero-tag" data-i18n="tagline"></p>
+      </div>
+      <div class="hero-bottom">
+        <div id="akey-verse"></div>
+        <button id="start-btn" class="startbtn" type="button" data-i18n="start"></button>
+        <button id="share-app" class="sharelink" type="button" data-i18n="share"></button>
+      </div>
+    </div>
   </section>
 
   <section id="pawol" class="page">
@@ -50,9 +58,10 @@
 </nav>
 
 <script type="module" src="pawol.js"></script>
-  <script type="module" src="komunote.js"></script>
-  <script type="module" src="chat.js?v=1"></script>
-  <script type="module" src="solidarite.js"></script>
+<script type="module" src="komunote.js?v=3"></script>
+<script type="module" src="solidarite.js"></script>
+<script type="module" src="chat.js?v=3"></script>
+<script type="module" src="dm.js?v=1"></script>
 <script src="app.js"></script>
 <script>
 if ("serviceWorker" in navigator) {
@@ -60,4 +69,4 @@ if ("serviceWorker" in navigator) {
 }
 </script>
 </body>
-    </html>
+</html>
