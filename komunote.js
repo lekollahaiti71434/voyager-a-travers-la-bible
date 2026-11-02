@@ -309,6 +309,16 @@ function openProfile(uid, fallback) {
     box.appendChild(avatar(uid, shown, "big"));
     box.appendChild(el("h3", "", shown));
     box.appendChild(el("p", "", (pr && pr.bio) || s.noBio));
+    if (user && user.uid !== uid) {
+      const DMB = { ht: "Mesaj prive", fr: "Message privé", en: "Private message", es: "Mensaje privado" };
+      const dm = el("button", "kbtn", "🔒 " + DMB[lang()]);
+      dm.type = "button";
+      dm.onclick = function () {
+        o.remove();
+        window.dispatchEvent(new CustomEvent("open-dm", { detail: { uid: uid, name: shown } }));
+      };
+      box.appendChild(dm);
+    }
     const c = el("button", "kbtn", s.close);
     c.type = "button";
     c.onclick = function () { o.remove(); };
@@ -1228,5 +1238,9 @@ onSnapshot(
 
 document.getElementById("lang-btn").addEventListener("click", renderAll);
 setInterval(function () { renderFeed(); }, 60000);
+
+window.addEventListener("open-profile", function (e) {
+  if (e.detail) openProfile(e.detail.uid, e.detail.name);
+});
 
 renderAll();
