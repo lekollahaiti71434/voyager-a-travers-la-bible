@@ -84,6 +84,7 @@
 .kpreview img { max-height:120px; border-radius:8px; }
 .klight { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:9999; display:flex; align-items:center; justify-content:center; padding:10px; }
 .klight img { max-width:100%; max-height:100%; border-radius:6px; }
+
 .cswitch { display:flex; background:#efe9d8; border-radius:22px; padding:4px; margin:6px 0 12px; }
 .cswitch button { flex:1; border:none; background:transparent; padding:10px; border-radius:18px; font:inherit; font-size:.92rem; color:#555; }
 .cswitch button.on { background:#c9a24a; color:#fff; font-weight:bold; }
@@ -109,3 +110,18 @@
 .csend { flex:none; width:48px; height:48px; min-width:48px; border-radius:50%; border:0; background:#c9a24a; color:#111; display:flex; align-items:center; justify-content:center; padding:0; }
 .csend svg { width:24px; height:24px; display:block; margin-left:2px; }
 .cnote { text-align:center; color:#777; padding:14px 10px; font-size:.9rem; }
+
+.dmpanel { display:none; flex-direction:column; height:calc(100dvh - 350px); min-height:320px; }
+.kdm .dmpanel { display:flex; }
+.kdm .ktabs, .kdm .kfeed, .kdm .kfab { display:none !important; }
+.kdm { padding-bottom:0 !important; }
+.kedit .dmpanel { display:none !important; }
+.dmlist { flex:1; overflow-y:auto; }
+.dmrow { display:flex; align-items:center; gap:12px; padding:12px 6px; border-bottom:1px solid #ece4cd; cursor:pointer; }
+.dmbody { flex:1; min-width:0; }
+.dmname { font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dmprev { font-size:.85rem; color:#777; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dmmeta { flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:6px; font-size:.72rem; color:#888; }
+.dmdot { width:10px; height:10px; border-radius:50%; background:#f2b632; }
+.dmbar { display:flex; align-items:center; gap:10px; padding-bottom:10px; }
+.dmtitle { flex:1; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
