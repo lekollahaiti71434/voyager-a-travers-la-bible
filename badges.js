@@ -122,7 +122,8 @@ onSnapshot(
   },
   function () {}
 );
-  onSnapshot(
+
+onSnapshot(
   query(collection(db, "projects"), orderBy("createdAt", "desc"), limit(5)),
   function (snap) {
     let m = 0;
