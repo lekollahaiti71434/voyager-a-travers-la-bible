@@ -29,6 +29,7 @@ const L = {
 const COLORS = ["#b5651d", "#2a7a8c", "#8e44ad", "#c0392b", "#27ae60", "#2c3e50", "#d35400"];
 const EMOJIS = ["🙏", "❤️", "😊", "😇", "🙌", "✝️", "🕊️", "📖", "🔥", "✨", "👍", "👏", "😂", "😢", "😍", "🥰", "😮", "🤗", "💪", "🌟", "🌹", "🎉", "😅", "🤝", "😉", "😌", "🙂", "😁", "😎", "🤲", "💛", "😭", "🙄", "😴", "🤔", "👋", "💐", "☀️", "🌈", "😔"];
 const SEND_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
+const DMLABEL = { ht: "Prive", fr: "Privé", en: "Private", es: "Privado" };
 
 function start() {
   const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
@@ -112,7 +113,7 @@ function start() {
   function renderSwitch() {
     const s = t();
     sw.textContent = "";
-    [["posts", s.posts], ["chat", s.chat]].forEach(function (v) {
+    [["posts", s.posts], ["chat", s.chat], ["dm", DMLABEL[lang()]]].forEach(function (v) {
       const b = el("button", view === v[0] ? "on" : "", v[1]);
       b.type = "button";
       b.onclick = function () { setView(v[0]); };
@@ -122,6 +123,8 @@ function start() {
   function setView(v) {
     view = v;
     root.classList.toggle("kchat", v === "chat");
+    root.classList.toggle("kdm", v === "dm");
+    window.dispatchEvent(new CustomEvent("kview", { detail: v }));
     renderSwitch();
     if (v === "chat") { forceScroll = true; renderBottom(); renderFeed(); }
   }
@@ -236,6 +239,10 @@ function start() {
         const n = el("div", "cname", shown);
         n.style.color = colorFor(shown);
         head.appendChild(n);
+        head.style.cursor = "pointer";
+        head.onclick = function () {
+          window.dispatchEvent(new CustomEvent("open-profile", { detail: { uid: m.uid, name: shown } }));
+        };
         box.appendChild(head);
       }
       box.appendChild(el("div", "ctext", m.text || ""));
