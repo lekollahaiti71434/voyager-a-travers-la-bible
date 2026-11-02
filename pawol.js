@@ -1,7 +1,9 @@
-import "./badges.js?v=2";
+import "./badges.js?v=3";
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getFirestore, collection, doc, getDoc, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
+
+const HERO_PHOTO = false;
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -77,16 +79,25 @@ function photoEl(d) {
 
 function renderHome() {
   const h = document.getElementById("akey-verse");
+  const hero = document.querySelector("#akey .hero");
   if (!h) return;
   const t = L[lang()];
   h.textContent = "";
+  if (hero) { hero.classList.remove("has-photo"); hero.style.removeProperty("--photo"); }
   if (state !== "ok" || !docs.length) return;
   const d = docs[0];
-  const card = el("div", "card");
-  if (needPhoto(d)) card.appendChild(photoEl(d));
-  card.appendChild(el("div", "ref", t.today + " · " + (d.reference || "")));
-  card.appendChild(el("p", "verse", pick(d, "verset")));
-  h.appendChild(card);
+  const q = lang() === "en" ? ["“", "”"] : ["«\u00a0", "\u00a0»"];
+  h.appendChild(el("div", "hq-label", t.today));
+  h.appendChild(el("p", "hq-text", q[0] + pick(d, "verset") + q[1]));
+  h.appendChild(el("div", "hq-ref", d.reference || ""));
+  if (HERO_PHOTO && hero && needPhoto(d)) {
+    fetchPhoto(d, function (src) {
+      if (src) {
+        hero.style.setProperty("--photo", 'url("' + src + '")');
+        hero.classList.add("has-photo");
+      }
+    });
+  }
 }
 
 function render() {
