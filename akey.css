@@ -89,3 +89,13 @@ img { max-width: 100%; }
   cursor: pointer;
   padding: 6px 10px;
 }
+
+/* Kenbe liy ak paragraf jan Administratè a ekri yo (Enter) nan Pawòl Bondye ak Akèy */
+#pawol-content p,
+#pawol-content .reflexion,
+#pawol-content .priye,
+#pawol-content .ptext,
+#pawol-content .pbody,
+#akey-verse p {
+  white-space: pre-line;
+}
