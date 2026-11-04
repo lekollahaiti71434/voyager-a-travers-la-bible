@@ -28,10 +28,27 @@ function waitApp(cb, tries = 0) {
 }
 
 function buildUI() {
-  const fab = el("button", "kf-fab", "🎙️");
-  fab.id = "kf-fab"; fab.setAttribute("aria-label", "Konferans");
-  fab.onclick = openPanel;
-  document.body.appendChild(fab);
+  // Bouton "Konferans" nan menm ba navigasyon an (Akèy, Pawòl Bondye, Kominote, Solidarite)
+  const nav = document.querySelector("nav");
+  if (nav && !$("kf-nav")) {
+    const nb = document.createElement("button");
+    nb.id = "kf-nav"; nb.type = "button";
+    nb.textContent = L().title;
+    nav.appendChild(nb);
+    // Capture: pa kite app.js trete bouton sa a kòm yon paj nòmal
+    nav.addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      if (b.id === "kf-nav") {
+        e.stopPropagation();
+        if ($("kf-panel").hidden) openPanel(); else closePanel();
+      } else if (!$("kf-panel").hidden) {
+        closePanel(); // klike sou lòt onglè a fèmen Konferans lan, app.js fè rès la
+      }
+    }, true);
+    const lb = $("lang-btn");
+    if (lb) lb.addEventListener("click", () => setTimeout(() => { nb.textContent = L().title; if (!$("kf-panel").hidden) render(); }, 50));
+  }
 
   const p = el("div", "kf-panel"); p.id = "kf-panel"; p.hidden = true;
   p.innerHTML = `
@@ -52,8 +69,23 @@ function buildUI() {
   $("kf-leave").onclick = leaveCall;
 }
 
-function openPanel() { $("kf-panel").hidden = false; document.body.classList.add("kf-lock"); render(); }
-function closePanel() { leaveCall(); $("kf-panel").hidden = true; document.body.classList.remove("kf-lock"); }
+let prevActive = null;
+function openPanel() {
+  const nav = document.querySelector("nav"), p = $("kf-panel");
+  // Kite ba nan toujou vizib: panel la sispann juste anwo li
+  p.style.bottom = (nav ? nav.offsetHeight : 0) + "px";
+  prevActive = nav ? nav.querySelector("button.active") : null;
+  if (nav) nav.querySelectorAll("button.active").forEach(b => b.classList.remove("active"));
+  $("kf-nav").classList.add("active");
+  p.hidden = false; render();
+}
+function closePanel() {
+  leaveCall();
+  $("kf-panel").hidden = true;
+  const k = $("kf-nav"); if (k) k.classList.remove("active");
+  if (prevActive) prevActive.classList.add("active");
+  prevActive = null;
+}
 
 function fmtDate(v) {
   try { return new Date(v).toLocaleString(localStorage.getItem("lang") || "ht", { dateStyle: "medium", timeStyle: "short" }); }
